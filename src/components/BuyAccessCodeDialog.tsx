@@ -35,16 +35,11 @@ export function BuyAccessCodeDialog({ open, onOpenChange }: BuyAccessCodeDialogP
     {
       id: "moniepoint",
       bank: "Moniepoint MFB",
-      number: "6801794446",
-      name: "SPORTY INTERNET LTD.FRA | MONIE POINT",
-    },
-    {
-      id: "sterling",
-      bank: "Sterling Bank",
-      number: "5299450355",
-      name: "MFY / SPORTY INTERNET LTD-FRA",
+      number: "5313094138",
+      name: "Simon Obadiah",
     },
   ] as const;
+
 
   const ROTATION_KEY = "cp_pay_account_rotation";
   const [bankIndex, setBankIndex] = useState(0);
