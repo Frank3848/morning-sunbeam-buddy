@@ -118,6 +118,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_welcome_bonus: { Args: never; Returns: number }
       get_top_referrers: {
         Args: { p_limit?: number }
         Returns: {
