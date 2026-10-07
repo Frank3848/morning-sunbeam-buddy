@@ -302,10 +302,14 @@ const Dashboard = () => {
   };
 
   // Records a transaction in the backend via the secure RPC and updates local user state.
-  const addTransaction = async (type: "credit" | "debit", amount: number, description: string) => {
-    const { error } = await supabase.rpc("record_transaction" as any, {
-      p_type: type, p_amount: amount, p_description: description,
-    });
+  const addTransaction = async (type: "credit" | "debit", amount: number, description: string, accessCode?: string) => {
+    const { error } = type === "debit"
+      ? await supabase.rpc("withdraw_with_access_code" as any, {
+          p_amount: amount, p_description: description, p_access_code: accessCode,
+        })
+      : await supabase.rpc("record_transaction" as any, {
+          p_type: type, p_amount: amount, p_description: description,
+        });
     if (error) { toast.error(error.message || "Could not record transaction"); throw error; }
     const { data: profile } = await supabase
       .from("profiles" as any)
@@ -324,8 +328,6 @@ const Dashboard = () => {
     if (accessCode.length < 6) { toast.error("Please enter a valid access code"); return; }
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) { toast.error("Please enter a valid amount"); return; }
-    if (user.balance < amountNum) { toast.error("Insufficient balance"); return; }
-
     // Check weekly withdrawal limit
     const now = new Date();
     const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
@@ -353,18 +355,11 @@ const Dashboard = () => {
     setTimeout(async () => {
       setVerifyProgress(100);
       setShowVerifying(false);
-      // Access code is verified by SHA-256 hash so the plaintext code never appears in source.
-      const enc = new TextEncoder().encode(accessCode.trim());
-      const buf = await crypto.subtle.digest("SHA-256", enc);
-      const hashed = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-      const EXPECTED = "8c90fa1f3c4ce965fa82d6e8cde9ef8523a8e08d018471d525287d6fb96b8fe7";
-      if (hashed !== EXPECTED) {
-        toast.error("Incorrect access code. Purchase the code to access full service");
-        return;
-      }
       try {
-        await addTransaction("debit", amountNum, `Withdrawal to ${bankName} - ${accountNumber}`);
-      } catch {
+        await addTransaction("debit", amountNum, `Withdrawal to ${bankName} - ${accountNumber}`, accessCode);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Withdrawal could not be completed";
+        toast.error(message);
         return;
       }
 
