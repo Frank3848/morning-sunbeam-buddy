@@ -146,6 +146,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      withdraw_with_access_code: {
+        Args: { p_access_code: string; p_amount: number; p_description: string }
+        Returns: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          status: string
+          type: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
