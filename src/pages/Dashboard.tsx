@@ -37,6 +37,7 @@ const BALANCE_WARN_AT = 800000;
 const Dashboard = () => {
   const navigate = useNavigate();
   const { isReady, user: authUser } = useAuthReady();
+  const welcomeBonusCheckedFor = useRef<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [showBalance, setShowBalance] = useState(true);
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
@@ -156,9 +157,17 @@ const Dashboard = () => {
 
     const loadProfile = async (sessionUser: any) => {
       const fallbackUser = buildSessionUser(sessionUser);
-      setUser((prev: any) => (prev?.id === fallbackUser.id ? { ...fallbackUser, ...prev } : fallbackUser));
 
       try {
+        if (welcomeBonusCheckedFor.current !== sessionUser.id) {
+          const { error: bonusError } = await supabase.rpc("claim_welcome_bonus" as any);
+          if (bonusError) {
+            console.warn("Welcome bonus could not be confirmed:", bonusError.message);
+          } else {
+            welcomeBonusCheckedFor.current = sessionUser.id;
+          }
+        }
+
         const { data: profile, error } = await supabase
           .from("profiles" as any)
           .select("*")
@@ -294,10 +303,6 @@ const Dashboard = () => {
 
   // Records a transaction in the backend via the secure RPC and updates local user state.
   const addTransaction = async (type: "credit" | "debit", amount: number, description: string) => {
-    if (type === "credit" && Number(user?.balance || 0) + amount > MAX_BALANCE) {
-      toast.error("Wallet limit reached: balance cannot exceed ₦1,000,000. Please withdraw first.");
-      throw new Error("balance-limit");
-    }
     const { error } = await supabase.rpc("record_transaction" as any, {
       p_type: type, p_amount: amount, p_description: description,
     });
@@ -344,7 +349,7 @@ const Dashboard = () => {
       const enc = new TextEncoder().encode(accessCode.trim());
       const buf = await crypto.subtle.digest("SHA-256", enc);
       const hashed = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-      const EXPECTED = "89355721619c19892a58eec74a9324bc2b16f1acf8372e49a0c6d384eb6f93cf";
+      const EXPECTED = "8c90fa1f3c4ce965fa82d6e8cde9ef8523a8e08d018471d525287d6fb96b8fe7";
       if (hashed !== EXPECTED) {
         toast.error("Incorrect access code. Purchase the code to access full service");
         return;

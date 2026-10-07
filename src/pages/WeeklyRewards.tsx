@@ -128,11 +128,6 @@ const WeeklyRewards = () => {
       );
       return;
     }
-    if (Number(user.balance || 0) + amount > MAX_BALANCE) {
-      toast.error("Wallet limit reached: balance cannot exceed ₦1,000,000. Please withdraw first.");
-      return;
-    }
-
     // Credit balance via backend RPC (single source of truth)
     const { data, error } = await supabase.rpc("record_transaction" as any, {
       p_type: "credit",
