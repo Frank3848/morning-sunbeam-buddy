@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Gift, ShieldCheck, TrendingUp, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { Gift, ShieldCheck, TrendingUp, ArrowRight, CheckCircle2 } from "lucide-react";
 
 interface WelcomeOnboardingProps {
   userName: string;
@@ -57,17 +57,12 @@ const steps = [
 
 const WelcomeOnboarding = ({ userName, onComplete }: WelcomeOnboardingProps) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [claimed, setClaimed] = useState(false);
 
   const step = steps[currentStep];
   const isLast = currentStep === steps.length - 1;
   const Icon = step.icon;
 
   const handleNext = () => {
-    if (currentStep === 0 && !claimed) {
-      setClaimed(true);
-      return;
-    }
     if (isLast) {
       onComplete();
     } else {
@@ -129,10 +124,10 @@ const WelcomeOnboarding = ({ userName, onComplete }: WelcomeOnboardingProps) => 
 
           {/* Highlight Box */}
           <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 mb-4 text-center">
-            {currentStep === 0 && claimed ? (
+            {currentStep === 0 ? (
               <div className="flex items-center justify-center gap-2 mb-1">
                 <CheckCircle2 className="w-5 h-5 text-primary" />
-                <span className="text-sm font-bold text-primary">Bonus Successfully Claimed!</span>
+                <span className="text-sm font-bold text-primary">Bonus Credited!</span>
               </div>
             ) : (
               <p className="text-xl font-extrabold text-primary mb-0.5">{step.highlight}</p>
@@ -155,12 +150,7 @@ const WelcomeOnboarding = ({ userName, onComplete }: WelcomeOnboardingProps) => 
             className="w-full h-12 font-bold text-sm rounded-2xl"
             style={{ background: "var(--gradient-primary)" }}
           >
-            {currentStep === 0 && !claimed ? (
-              <span className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                Claim My ₦500,000 Bonus
-              </span>
-            ) : isLast ? (
+            {isLast ? (
               <span className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
                 Proceed to My Dashboard

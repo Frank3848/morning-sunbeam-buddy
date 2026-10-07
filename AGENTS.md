@@ -1,1 +1,1 @@
-- Keep wallet initialization and reward credits authoritative in narrowly scoped database functions; call them from authenticated client flows so clients cannot mint or alter balances directly.
+- Keep wallet initialization, reward credits, and withdrawals authoritative in narrowly scoped database functions; require backend verification for withdrawal access codes so clients cannot mint or alter balances directly.

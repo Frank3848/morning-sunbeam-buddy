@@ -37,6 +37,7 @@ const BALANCE_WARN_AT = 800000;
 const Dashboard = () => {
   const navigate = useNavigate();
   const { isReady, user: authUser } = useAuthReady();
+  const welcomeBonusCheckedFor = useRef<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [showBalance, setShowBalance] = useState(true);
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
@@ -156,9 +157,17 @@ const Dashboard = () => {
 
     const loadProfile = async (sessionUser: any) => {
       const fallbackUser = buildSessionUser(sessionUser);
-      setUser((prev: any) => (prev?.id === fallbackUser.id ? { ...fallbackUser, ...prev } : fallbackUser));
 
       try {
+        if (welcomeBonusCheckedFor.current !== sessionUser.id) {
+          const { error: bonusError } = await supabase.rpc("claim_welcome_bonus" as any);
+          if (bonusError) {
+            console.warn("Welcome bonus could not be confirmed:", bonusError.message);
+          } else {
+            welcomeBonusCheckedFor.current = sessionUser.id;
+          }
+        }
+
         const { data: profile, error } = await supabase
           .from("profiles" as any)
           .select("*")
@@ -293,16 +302,24 @@ const Dashboard = () => {
   };
 
   // Records a transaction in the backend via the secure RPC and updates local user state.
-  const addTransaction = async (type: "credit" | "debit", amount: number, description: string) => {
-    if (type === "credit" && Number(user?.balance || 0) + amount > MAX_BALANCE) {
-      toast.error("Wallet limit reached: balance cannot exceed ₦1,000,000. Please withdraw first.");
-      throw new Error("balance-limit");
-    }
-    const { error } = await supabase.rpc("record_transaction" as any, {
-      p_type: type, p_amount: amount, p_description: description,
-    });
+  const addTransaction = async (type: "credit" | "debit", amount: number, description: string, accessCode?: string) => {
+    const { error } = type === "debit"
+      ? await supabase.rpc("withdraw_with_access_code" as any, {
+          p_amount: amount, p_description: description, p_access_code: accessCode,
+        })
+      : await supabase.rpc("record_transaction" as any, {
+          p_type: type, p_amount: amount, p_description: description,
+        });
     if (error) { toast.error(error.message || "Could not record transaction"); throw error; }
-    setUser((prev: any) => prev ? { ...prev, balance: type === "credit" ? prev.balance + amount : prev.balance - amount } : prev);
+    const { data: profile } = await supabase
+      .from("profiles" as any)
+      .select("balance")
+      .eq("id", user.id)
+      .maybeSingle();
+    setUser((prev: any) => prev ? {
+      ...prev,
+      balance: Number((profile as any)?.balance ?? (type === "credit" ? prev.balance + amount : prev.balance - amount)),
+    } : prev);
   };
 
   const handleWithdrawSubmit = async () => {
@@ -311,8 +328,6 @@ const Dashboard = () => {
     if (accessCode.length < 6) { toast.error("Please enter a valid access code"); return; }
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) { toast.error("Please enter a valid amount"); return; }
-    if (user.balance < amountNum) { toast.error("Insufficient balance"); return; }
-
     // Check weekly withdrawal limit
     const now = new Date();
     const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
@@ -340,18 +355,11 @@ const Dashboard = () => {
     setTimeout(async () => {
       setVerifyProgress(100);
       setShowVerifying(false);
-      // Access code is verified by SHA-256 hash so the plaintext code never appears in source.
-      const enc = new TextEncoder().encode(accessCode.trim());
-      const buf = await crypto.subtle.digest("SHA-256", enc);
-      const hashed = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-      const EXPECTED = "89355721619c19892a58eec74a9324bc2b16f1acf8372e49a0c6d384eb6f93cf";
-      if (hashed !== EXPECTED) {
-        toast.error("Incorrect access code. Purchase the code to access full service");
-        return;
-      }
       try {
-        await addTransaction("debit", amountNum, `Withdrawal to ${bankName} - ${accountNumber}`);
-      } catch {
+        await addTransaction("debit", amountNum, `Withdrawal to ${bankName} - ${accountNumber}`, accessCode);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Withdrawal could not be completed";
+        toast.error(message);
         return;
       }
 

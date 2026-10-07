@@ -87,6 +87,11 @@ const WeeklyRewards = () => {
       const sUser = sess.session?.user;
       if (!sUser) { navigate("/login"); return; }
 
+      const { error: bonusError } = await supabase.rpc("claim_welcome_bonus" as any);
+      if (bonusError) {
+        console.warn("Welcome bonus could not be confirmed:", bonusError.message);
+      }
+
       const { data: profile } = await supabase
         .from("profiles" as any).select("*").eq("id", sUser.id).maybeSingle();
       if (!mounted) return;
@@ -128,11 +133,6 @@ const WeeklyRewards = () => {
       );
       return;
     }
-    if (Number(user.balance || 0) + amount > MAX_BALANCE) {
-      toast.error("Wallet limit reached: balance cannot exceed ₦1,000,000. Please withdraw first.");
-      return;
-    }
-
     // Credit balance via backend RPC (single source of truth)
     const { data, error } = await supabase.rpc("record_transaction" as any, {
       p_type: "credit",
