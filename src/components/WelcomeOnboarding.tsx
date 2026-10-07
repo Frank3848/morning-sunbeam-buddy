@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Gift, ShieldCheck, TrendingUp, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { Gift, ShieldCheck, TrendingUp, ArrowRight, CheckCircle2 } from "lucide-react";
 
 interface WelcomeOnboardingProps {
   userName: string;

@@ -307,7 +307,15 @@ const Dashboard = () => {
       p_type: type, p_amount: amount, p_description: description,
     });
     if (error) { toast.error(error.message || "Could not record transaction"); throw error; }
-    setUser((prev: any) => prev ? { ...prev, balance: type === "credit" ? prev.balance + amount : prev.balance - amount } : prev);
+    const { data: profile } = await supabase
+      .from("profiles" as any)
+      .select("balance")
+      .eq("id", user.id)
+      .maybeSingle();
+    setUser((prev: any) => prev ? {
+      ...prev,
+      balance: Number((profile as any)?.balance ?? (type === "credit" ? prev.balance + amount : prev.balance - amount)),
+    } : prev);
   };
 
   const handleWithdrawSubmit = async () => {

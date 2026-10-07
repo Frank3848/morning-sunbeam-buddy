@@ -87,6 +87,11 @@ const WeeklyRewards = () => {
       const sUser = sess.session?.user;
       if (!sUser) { navigate("/login"); return; }
 
+      const { error: bonusError } = await supabase.rpc("claim_welcome_bonus" as any);
+      if (bonusError) {
+        console.warn("Welcome bonus could not be confirmed:", bonusError.message);
+      }
+
       const { data: profile } = await supabase
         .from("profiles" as any).select("*").eq("id", sUser.id).maybeSingle();
       if (!mounted) return;
